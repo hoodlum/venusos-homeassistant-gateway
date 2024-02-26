@@ -8,11 +8,14 @@ import (
 	"os"
 )
 
+type LookupTable map[string][]BatchEntry
+
 type Config struct {
-	configFile   string
-	mqttServer   string
-	mqttClientId string
-	batches      map[string][]BatchEntry
+	configFile     string
+	mqttServer     string
+	mqttClientId   string
+	lookupTable    LookupTable
+	monitoringItem []MonitoringItem
 }
 
 type BatchEntry struct {
@@ -26,13 +29,20 @@ type BatchEntry struct {
 }
 
 type Batch struct {
-	DbusName string
-	Entries  []BatchEntry
+	DbusName       string
+	UpdateStrategy string
+	Entries        []BatchEntry
 }
 
-func getConfig() (Config, error) {
+type MonitoringItem struct {
+	DbusName   string
+	Member     string
+	ObjectPath string
+}
 
-	configFile := flag.String("config", "batches.json", "path of config file ")
+func getConfig() Config {
+
+	configFile := flag.String("config", "lookupTable.json", "path of config file ")
 	mqttServer := flag.String("server", "192.168.178.3:1883", "IP:Port")
 	//mqttQos := flag.Int("qos", 0, "The QoS to subscribe to messages at")
 	mqttClientId := flag.String("clientid", "vz-homeassistant-gateway", "A clientid for the connection")
@@ -43,29 +53,27 @@ func getConfig() (Config, error) {
 	log.Infof("MQTT: clientId=%s", *mqttClientId)
 	log.Infof("MQTT: server=%s", *mqttServer)
 
-	batches, err := loadBatchFromConfig(*configFile)
-
+	batches, err := loadBatchesFromConfig(*configFile)
 	if err != nil {
-		return Config{}, err
+		log.Info("Gateway: Error parsing configFile")
+		os.Exit(1)
 	}
 
 	return Config{
-		mqttClientId: *mqttClientId,
-		mqttServer:   *mqttServer,
-		configFile:   *configFile,
-		batches:      batches,
-	}, nil
-
+		mqttClientId:   *mqttClientId,
+		mqttServer:     *mqttServer,
+		configFile:     *configFile,
+		lookupTable:    extractLookupTable(batches),
+		monitoringItem: extractMonitorigItems(batches),
+	}
 }
 
-func loadBatchFromConfig(fileName string) (map[string][]BatchEntry, error) {
+func loadBatchesFromConfig(fileName string) ([]Batch, error) {
 
 	var input []Batch
 
 	// Open our jsonFile
 	if jsonFile, err := os.Open(fileName); err == nil {
-
-		//var batch []Batch
 
 		// read our opened jsonFile as a byte array.
 		b, _ := io.ReadAll(jsonFile)
@@ -73,26 +81,66 @@ func loadBatchFromConfig(fileName string) (map[string][]BatchEntry, error) {
 		if err := json.Unmarshal(b, &input); err != nil {
 			log.Info("Gateway: Error parse batch config: ", err)
 			return nil, err
+		} else {
+			return input, nil
 		}
+
+	} else {
+		return nil, err
 	}
 
-	var key string
-	batches := make(map[string][]BatchEntry)
+}
 
-	for _, batch := range input {
+func extractLookupTable(batches []Batch) LookupTable {
+
+	var key string
+	lookupTable := make(LookupTable)
+
+	for _, batch := range batches {
 
 		for _, f := range batch.Entries {
 			key = batch.DbusName + "%" + f.DbusPath
-			a := batches[key]
-			if batches[key] == nil {
+			a := lookupTable[key]
+			if lookupTable[key] == nil {
 				a = make([]BatchEntry, 0)
 			}
 			f.DbusName = batch.DbusName
 			a = append(a, f)
-			batches[key] = a
+			lookupTable[key] = a
 		}
 
 	}
 
-	return batches, nil
+	return lookupTable
+}
+
+func extractMonitorigItems(batches []Batch) []MonitoringItem {
+
+	monitoringItems := make([]MonitoringItem, 0, 10)
+
+	for _, batch := range batches {
+
+		if batch.UpdateStrategy == "batch" {
+
+			monitoringItem := MonitoringItem{
+				DbusName:   batch.DbusName,
+				Member:     "ItemsChanged",
+				ObjectPath: "/", //Root path of sender
+			}
+			monitoringItems = append(monitoringItems, monitoringItem)
+		} else {
+			for _, f := range batch.Entries {
+				monitoringItems = append(monitoringItems, MonitoringItem{
+					DbusName:   batch.DbusName,
+					Member:     "PropertiesChanged",
+					ObjectPath: f.DbusPath,
+				})
+
+			}
+		}
+
+	}
+
+	return monitoringItems
+
 }

@@ -38,14 +38,14 @@ type HomeAssistanUpdate struct {
 	Value float64 `json:"value"`
 }
 
-const homeAssistantMetaTopic = "homeassistant/sensor/"
+const homeAssistantMetaTopic = "test/homeassistant/sensor/"
+const statusTopic = "test/" + deviceName + "/" + uniqueId
 
 const deviceName = "jkbms"
 const deviceModel = "diy-batterie"
 const uniqueId = "batt1"
 const swVersion = "v0.1"
 const manufacturer = "DIY"
-const statusTopic = deviceName + "/" + uniqueId
 
 var mqttClient *paho.Client
 

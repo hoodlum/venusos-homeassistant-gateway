@@ -6,20 +6,21 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
+	"slices"
 )
 
-type LookupTable map[string][]BatchEntry
+// type LookupTable map[string][]BatchEntry
 
 type Config struct {
-	configFile     string
-	mqttServer     string
-	mqttClientId   string
-	lookupTable    LookupTable
+	configFile   string
+	mqttServer   string
+	mqttClientId string
+	//lookupTable    LookupTable
 	monitoringItem []MonitoringItem
 }
 
 type BatchEntry struct {
-	DbusName string
+	//DbusName string
 	DataType string //encoding
 	Name     string
 	//	Topic    string
@@ -38,6 +39,7 @@ type MonitoringItem struct {
 	DbusName   string
 	Member     string
 	ObjectPath string
+	Entries    []BatchEntry
 }
 
 func getConfig() Config {
@@ -60,11 +62,11 @@ func getConfig() Config {
 	}
 
 	return Config{
-		mqttClientId:   *mqttClientId,
-		mqttServer:     *mqttServer,
-		configFile:     *configFile,
-		lookupTable:    extractLookupTable(batches),
-		monitoringItem: extractMonitorigItems(batches),
+		mqttClientId: *mqttClientId,
+		mqttServer:   *mqttServer,
+		configFile:   *configFile,
+		//lookupTable:    extractLookupTable(batches),
+		monitoringItem: extractMonitoringItems(batches),
 	}
 }
 
@@ -91,6 +93,7 @@ func loadBatchesFromConfig(fileName string) ([]Batch, error) {
 
 }
 
+/*
 func extractLookupTable(batches []Batch) LookupTable {
 
 	var key string
@@ -99,12 +102,15 @@ func extractLookupTable(batches []Batch) LookupTable {
 	for _, batch := range batches {
 
 		for _, f := range batch.Entries {
-			key = batch.DbusName + "%" + f.DbusPath
+
+			//key = batch.DbusName + "%" + f.DbusPath
+			key = batch.DbusName
+
 			a := lookupTable[key]
 			if lookupTable[key] == nil {
 				a = make([]BatchEntry, 0)
 			}
-			f.DbusName = batch.DbusName
+			//f.DbusName = batch.DbusName
 			a = append(a, f)
 			lookupTable[key] = a
 		}
@@ -113,8 +119,9 @@ func extractLookupTable(batches []Batch) LookupTable {
 
 	return lookupTable
 }
+*/
 
-func extractMonitorigItems(batches []Batch) []MonitoringItem {
+func extractMonitoringItems(batches []Batch) []MonitoringItem {
 
 	monitoringItems := make([]MonitoringItem, 0, 10)
 
@@ -126,15 +133,26 @@ func extractMonitorigItems(batches []Batch) []MonitoringItem {
 				DbusName:   batch.DbusName,
 				Member:     "ItemsChanged",
 				ObjectPath: "/", //Root path of sender
+				Entries:    batch.Entries,
 			}
+
 			monitoringItems = append(monitoringItems, monitoringItem)
 		} else {
+
 			for _, f := range batch.Entries {
-				monitoringItems = append(monitoringItems, MonitoringItem{
-					DbusName:   batch.DbusName,
-					Member:     "PropertiesChanged",
-					ObjectPath: f.DbusPath,
-				})
+
+				idx := slices.IndexFunc(monitoringItems, func(i MonitoringItem) bool { return i.ObjectPath == f.DbusPath })
+				if idx == -1 {
+					monitoringItems = append(monitoringItems, MonitoringItem{
+						DbusName:   batch.DbusName,
+						Member:     "PropertiesChanged",
+						ObjectPath: f.DbusPath,
+						Entries:    []BatchEntry{f},
+					})
+
+				} else {
+					monitoringItems[idx].Entries = append(monitoringItems[idx].Entries, f)
+				}
 
 			}
 		}

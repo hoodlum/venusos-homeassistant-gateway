@@ -33,13 +33,7 @@ type HomeAssistantMeta struct {
 	Device     HomeAssistantDevice `json:"device"`
 }
 
-type HomeAssistanUpdate struct {
-	Key   string  `json:"key"`
-	Value float64 `json:"value"`
-}
-
-const homeAssistantMetaTopic = "test/homeassistant/sensor/"
-const statusTopic = "test/" + deviceName + "/" + uniqueId
+const homeAssistantMetaTopic = "homeassistant/sensor/"
 
 const deviceName = "jkbms"
 const deviceModel = "diy-batterie"
@@ -47,17 +41,19 @@ const uniqueId = "batt1"
 const swVersion = "v0.1"
 const manufacturer = "DIY"
 
+const statusTopic = deviceName + "/" + uniqueId
+
 var mqttClient *paho.Client
 
-func createAutoDiscovery(batches map[string][]BatchEntry) {
-	for _, batch := range batches {
-		createAutoDiscoveryMeta(batch)
+func createAutoDiscovery(items []MonitoringItem) {
+	for _, item := range items {
+		createAutoDiscoveryMeta(item)
 	}
 }
 
-func createAutoDiscoveryMeta(batch []BatchEntry) {
+func createAutoDiscoveryMeta(item MonitoringItem) {
 
-	for _, entry := range batch {
+	for _, entry := range item.Entries {
 
 		devCla := ""
 		switch entry.Unit {
@@ -100,7 +96,7 @@ func createAutoDiscoveryMeta(batch []BatchEntry) {
 
 		if payload, err := json.Marshal(ham); err == nil {
 
-			topic := "test/" + homeAssistantMetaTopic + deviceName + "/" + ham.UniqId + "/config"
+			topic := homeAssistantMetaTopic + deviceName + "/" + ham.UniqId + "/config"
 
 			if _, err := mqttClient.Publish(context.Background(), &paho.Publish{
 				Topic:   topic,
@@ -110,7 +106,7 @@ func createAutoDiscoveryMeta(batch []BatchEntry) {
 			}); err != nil {
 				log.Debugln("MQTT: error sending message:", err)
 			}
-			log.Debugln("MQTT: sent")
+			//log.Debugln("MQTT: sent")
 		}
 
 	}
@@ -195,6 +191,28 @@ func publishData(batch []BatchEntry, value float64) error {
 
 		jsonData[removeSpace(field.Name)] = v
 	}
+
+	log.Debugf("MQTT: Publish: %v", jsonData)
+
+	if payload, err := json.Marshal(jsonData); err == nil {
+
+		if _, err := mqttClient.Publish(context.Background(), &paho.Publish{
+			Topic:   statusTopic,
+			QoS:     0,
+			Retain:  false,
+			Payload: payload,
+		}); err != nil {
+			log.Debugln("MQTT: error sending message:", err)
+			return errors.New("MQTT: could not publish data or create payload")
+		}
+		log.Debugln("MQTT: successful send paylaod to: ", statusTopic)
+		return nil
+	}
+
+	return errors.New("MQTT: could not publish data or create payload")
+}
+
+func publishDataRaw(jsonData map[string]interface{}) error {
 
 	log.Debugf("MQTT: Publish: %v", jsonData)
 

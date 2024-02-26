@@ -29,8 +29,8 @@ func main() {
 
 	config := getConfig()
 
-	startMqttClient(config.mqttServer, mqttClient.ClientID)
-	createAutoDiscovery(config.lookupTable)
+	startMqttClient(config.mqttServer, config.mqttClientId)
+	createAutoDiscovery(config.monitoringItem)
 
 	initDbusService()
 
@@ -41,7 +41,7 @@ func main() {
 
 	initDbusMonitor(conn, config.monitoringItem)
 
-	go startDbusMonitoring(conn, config.lookupTable, watchdog)
+	go startDbusMonitoring(conn, config.monitoringItem, watchdog)
 
 	log.Info("Gateway: wait for termination")
 

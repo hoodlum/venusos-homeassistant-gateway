@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/godbus/dbus/v5"
+	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"os"
 )
@@ -35,29 +36,53 @@ func getBusName(conn *dbus.Conn, wellKnownName string) string {
 	return s
 }
 
-func startDbusMonitoring(conn *dbus.Conn, batches map[string][]BatchEntry, watchdog *Watchdog) {
+func startDbusMonitoring(conn *dbus.Conn, items []MonitoringItem, watchdog *Watchdog) {
+
+	busNames := map[string]string{}
+
+	x := lo.Uniq(
+		lo.Map(items, func(item MonitoringItem, idx int) string { return item.DbusName }),
+	)
+
+	for _, wellKnownBusName := range x {
+		busName := getBusName(conn, wellKnownBusName)
+		busNames[busName] = wellKnownBusName
+		log.Infof("DbusLookup: %s => %s", wellKnownBusName, busName)
+	}
 
 	signals := make(chan *dbus.Signal, 10)
 	conn.Signal(signals)
 
 	for sig := range signals {
-		log.Debugf("Message: %#v\n", sig)
 
-		key := getKeyFromSignal(sig)
-		log.Debugf("Key: %#v\n", key)
+		if len(sig.Body) != 1 {
+			continue //skip
+		}
 
-		if len(sig.Body) == 1 {
+		//log.Infof("Message: %#v\n", sig)
+		//log.Debugf("Sender: %#v\n", wellKnownBusName)
+
+		item, ok := lo.Find(items, func(item MonitoringItem) bool {
+			return item.DbusName == busNames[sig.Sender] && item.ObjectPath == string(sig.Path)
+		})
+
+		if !ok {
+			continue //skip
+		}
+
+		log.Debugf("DBUS: Found matching entry: %#v\n", item.DbusName)
+		if item.Member == "PropertiesChanged" {
 
 			m := sig.Body[0].(map[string]dbus.Variant) // {map[string]Variant{}, `@a{sv} {}`}
 			vv := m["Value"]
-			log.Debugf("Value: %#v\n", vv)
+			log.Debugf("DBUS: Variant: %#v\n", vv)
 
 			if vv.Signature().String() == "d" {
 
 				v := vv.Value().(float64)
-				log.Debugf("Path: %s = %#f\n", sig.Path, v)
+				log.Debugf("DBUS: Value: %s = %#f\n", sig.Path, v)
 
-				if err := publishData(batches[key], v); err != nil {
+				if err := publishData(item.Entries, v); err != nil {
 					log.Errorf("Error %#v\\n\"", err)
 				} else {
 					watchdog.ResetWatchdog()
@@ -66,27 +91,60 @@ func startDbusMonitoring(conn *dbus.Conn, batches map[string][]BatchEntry, watch
 			}
 		}
 
+		if item.Member == "ItemsChanged" {
+
+			/*
+				paths := lo.Map(item.Entries, func(item BatchEntry, index int) string {
+					return item.DbusPath
+				})
+			*/
+
+			jsonData := map[string]interface{}{}
+
+			//log.Infof("Message: %#v\n", sig)
+			ma := sig.Body[0].(map[string]map[string]dbus.Variant) // {map[string]map[string]Variant{}, `@a{sa{sv}} {}`}
+
+			for k, v := range ma {
+
+				if e, ok := lo.Find(item.Entries, func(entry BatchEntry) bool {
+					return entry.DbusPath == k
+				}); ok {
+					vv := v["Value"]
+					log.Debugf("Key: %s -> %s[%s]\n", k, vv, vv.Signature().String())
+					//for x := range v { log.Infof("  Key: %s \n", x)}
+					//if vv.Signature().String() == "d" {}
+					switch vv.Signature().String() {
+					case "n":
+						jsonData[removeSpace(e.Name)] = vv.Value().(int16)
+					case "i":
+						jsonData[removeSpace(e.Name)] = vv.Value().(int32)
+					}
+
+				}
+
+			}
+
+			if err := publishDataRaw(jsonData); err != nil {
+				log.Errorf("Error %#v\\n\"", err)
+			} else {
+				watchdog.ResetWatchdog()
+			}
+		}
+
 	}
 }
 
 func initDbusMonitor(conn *dbus.Conn, monitoringItems []MonitoringItem) {
 
-	for wellKnownDbusName, entries := range batches {
+	for _, entry := range monitoringItems {
+		log.Debugf("DBUS: add Match [%s]:%s:%s", entry.DbusName, entry.ObjectPath, entry.Member)
 
-		dbusName = getBusName(conn, wellKnownDbusName)
-		log.Infof("DBUS: well-known dbus name %s -> %s", wellKnownDbusName, dbusName)
-		dbusNames[dbusName] = wellKnownDbusName
-
-		for _, entry := range entries {
-			log.Debugf("DBUS: [Name=%s] addMatch %s:%s", entry.Name, entry.DbusName, entry.DbusPath)
-
-			if err := conn.AddMatchSignal(
-				dbus.WithMatchSender(entry.DbusName),
-				dbus.WithMatchMember("PropertiesChanged"),
-				dbus.WithMatchObjectPath(dbus.ObjectPath(entry.DbusPath)),
-			); err != nil {
-				panic(err)
-			}
+		if err := conn.AddMatchSignal(
+			dbus.WithMatchSender(entry.DbusName),
+			dbus.WithMatchMember(entry.Member),
+			dbus.WithMatchObjectPath(dbus.ObjectPath(entry.ObjectPath)),
+		); err != nil {
+			panic(err)
 		}
 	}
 

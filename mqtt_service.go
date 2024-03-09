@@ -110,7 +110,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			},
 		}
 
-		if devCla == "measurement" {
+		if statCla == "measurement" {
 			ham.Expire = "60"
 		}
 

@@ -62,7 +62,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 	for _, entry := range item.Entries {
 
 		devCla := ""
-		statCla := "measurement"
+		statCla := ""
 		switch entry.Unit {
 		case "Wh":
 			devCla = "energy"

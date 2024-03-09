@@ -1,0 +1,24 @@
+[
+  {
+    "DbusName": "com.victronenergy.battery.ttyUSB0",
+    "UpdateStrategy": "single",
+    "Entries": [
+      //{ "DataType": "float64", "Name": "Battery Current", "Unit":"A", "DbusPath":"/Dc/0/Current" },
+      //{ "DataType": "float64", "Name": "Battery Voltage", "Unit":"V", "DbusPath":"/Dc/0/Voltage" },
+      //{ "DataType": "float64", "Name": "Battery Power", "Unit":"W", "DbusPath":"/Dc/0/Power" },
+      //{ "DataType": "float64", "Name": "Battery Power In", "Unit":"W", "DbusPath":"/Dc/0/Power", "Direction": "in" },
+      //{ "DataType": "float64", "Name": "Battery Power Out", "Unit":"W", "DbusPath":"/Dc/0/Power", "Direction": "out" },
+      { "DataType": "float64", "Name": "State of Charge", "Unit":"%", "DbusPath":"/Soc" }
+    ]
+  },
+  {
+    "DbusName": "com.victronenergy.vebus.ttyUSB1",
+    "UpdateStrategy": "batch",
+    "Entries": [
+      //{ "DataType": "float64", "Name": "Inverter ActiveIn Power", "Unit":"W", "DbusPath":"/Ac/ActiveIn/P" },
+      //{ "DataType": "float64", "Name": "Inverter Devices AcIn Power", "Unit":"W", "DbusPath":"/Devices/0/Ac/In/P" },
+      //{ "DataType": "float64", "Name": "Inverter Devices Inverter Power", "Unit":"W", "DbusPath":"/Devices/0/Ac/Inverter/P" },
+      //{ "DataType": "float64", "Name": "Inverter Devices AcOut Power", "Unit":"W", "DbusPath":"/Devices/0/Ac/Out/P" }
+    ]
+  }
+]

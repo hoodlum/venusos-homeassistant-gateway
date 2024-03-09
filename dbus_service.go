@@ -67,10 +67,10 @@ func startDbusMonitoring(conn *dbus.Conn, items []MonitoringItem, watchdog *Watc
 		})
 
 		if !ok {
+			log.Debugf("DBUS: Did not find a matching entry: %#v\n", item.DbusName)
 			continue //skip
 		}
 
-		log.Debugf("DBUS: Found matching entry: %#v\n", item.DbusName)
 		if item.Member == "PropertiesChanged" {
 
 			m := sig.Body[0].(map[string]dbus.Variant) // {map[string]Variant{}, `@a{sv} {}`}
@@ -89,6 +89,20 @@ func startDbusMonitoring(conn *dbus.Conn, items []MonitoringItem, watchdog *Watc
 				}
 
 			}
+
+			if vv.Signature().String() == "i" {
+
+				v := vv.Value().(int32)
+				log.Debugf("DBUS: Value: %s = %#f\n", sig.Path, v)
+
+				if err := publishData(item.Entries, float64(v)); err != nil {
+					log.Errorf("Error %#v\\n\"", err)
+				} else {
+					watchdog.ResetWatchdog()
+				}
+
+			}
+
 		}
 
 		if item.Member == "ItemsChanged" {

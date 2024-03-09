@@ -93,34 +93,6 @@ func loadBatchesFromConfig(fileName string) ([]Batch, error) {
 
 }
 
-/*
-func extractLookupTable(batches []Batch) LookupTable {
-
-	var key string
-	lookupTable := make(LookupTable)
-
-	for _, batch := range batches {
-
-		for _, f := range batch.Entries {
-
-			//key = batch.DbusName + "%" + f.DbusPath
-			key = batch.DbusName
-
-			a := lookupTable[key]
-			if lookupTable[key] == nil {
-				a = make([]BatchEntry, 0)
-			}
-			//f.DbusName = batch.DbusName
-			a = append(a, f)
-			lookupTable[key] = a
-		}
-
-	}
-
-	return lookupTable
-}
-*/
-
 func extractMonitoringItems(batches []Batch) []MonitoringItem {
 
 	monitoringItems := make([]MonitoringItem, 0, 10)

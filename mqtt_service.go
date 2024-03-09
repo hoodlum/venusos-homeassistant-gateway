@@ -35,7 +35,8 @@ type HomeAssistantMeta struct {
 	Expire     string              `json:"expire_after"`
 }
 
-const homeAssistantMetaTopic = "homeassistant/sensor/"
+// const homeAssistantMetaTopic = "homeassistant/sensor/"
+const homeAssistantMetaTopic = "test/homeassistant/sensor/"
 
 const deviceName = "jkbms"
 const deviceModel = "diy-batterie"
@@ -43,7 +44,8 @@ const uniqueId = "batt1"
 const swVersion = "v0.1"
 const manufacturer = "DIY"
 
-const statusTopic = deviceName + "/" + uniqueId
+// const statusTopic = deviceName + "/" + uniqueId
+const statusTopic = "test/" + deviceName + "/" + uniqueId
 
 var mqttClient *paho.Client
 
@@ -221,6 +223,10 @@ func publishData(batch []BatchEntry, value float64) error {
 }
 
 func publishDataRaw(jsonData map[string]interface{}) error {
+
+	if len(jsonData) == 0 {
+		return nil
+	}
 
 	log.Debugf("MQTT: Publish: %v", jsonData)
 

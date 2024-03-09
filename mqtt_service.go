@@ -35,8 +35,9 @@ type HomeAssistantMeta struct {
 	Expire     string              `json:"expire_after"`
 }
 
-// const homeAssistantMetaTopic = "homeassistant/sensor/"
-const homeAssistantMetaTopic = "test/homeassistant/sensor/"
+const homeAssistantMetaTopic = "homeassistant/sensor/"
+
+//const homeAssistantMetaTopic = "test/homeassistant/sensor/"
 
 const deviceName = "jkbms"
 const deviceModel = "diy-batterie"
@@ -44,8 +45,9 @@ const uniqueId = "batt1"
 const swVersion = "v0.1"
 const manufacturer = "DIY"
 
-// const statusTopic = deviceName + "/" + uniqueId
-const statusTopic = "test/" + deviceName + "/" + uniqueId
+const statusTopic = deviceName + "/" + uniqueId
+
+//const statusTopic = "test/" + deviceName + "/" + uniqueId
 
 var mqttClient *paho.Client
 

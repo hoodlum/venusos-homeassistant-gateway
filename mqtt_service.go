@@ -64,10 +64,12 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 		switch entry.Unit {
 		case "Wh":
 			devCla = "energy"
+			statCla = "total_increasing"
 		case "s":
 			devCla = "duration"
 		case "W":
 			devCla = "power"
+			statCla = "measurement"
 		case "kWh":
 			devCla = "energy"
 			statCla = "total_increasing"
@@ -76,10 +78,13 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			statCla = "total_increasing"
 		case "A":
 			devCla = "current"
+			statCla = "measurement"
 		case "V":
 			devCla = "voltage"
+			statCla = "measurement"
 		case "°C":
 			devCla = "temperature"
+			statCla = "measurement"
 		case "%":
 			devCla = "battery"
 		}
@@ -101,7 +106,10 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 				Manufacturer: manufacturer,
 				Identifiers:  []string{uniqueId},
 			},
-			Expire: "60",
+		}
+
+		if devCla == "measurement" {
+			ham.Expire = "60"
 		}
 
 		if payload, err := json.Marshal(ham); err == nil {

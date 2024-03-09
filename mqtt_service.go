@@ -31,6 +31,7 @@ type HomeAssistantMeta struct {
 	ValTpl     string              `json:"val_tpl"`
 	UnitOfMeas string              `json:"unit_of_meas"`
 	Device     HomeAssistantDevice `json:"device"`
+	Expire     string              `json:"expire_after"`
 }
 
 const homeAssistantMetaTopic = "homeassistant/sensor/"
@@ -56,6 +57,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 	for _, entry := range item.Entries {
 
 		devCla := ""
+		statCla := "measurement"
 		switch entry.Unit {
 		case "Wh":
 			devCla = "energy"
@@ -65,8 +67,10 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			devCla = "power"
 		case "kWh":
 			devCla = "energy"
+			statCla = "total_increasing"
 		case "MWh":
 			devCla = "energy"
+			statCla = "total_increasing"
 		case "A":
 			devCla = "current"
 		case "V":
@@ -82,7 +86,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			UniqId:     uniqueId + "_" + removeSpace(entry.Name),
 			StatT:      statusTopic,
 			DevCla:     devCla,
-			StatCla:    "measurement",
+			StatCla:    statCla,
 			ValTpl:     "{{ value_json." + removeSpace(entry.Name) + " | is_defined }}",
 			UnitOfMeas: entry.Unit,
 			Device: HomeAssistantDevice{
@@ -92,6 +96,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 				Manufacturer: manufacturer,
 				Identifiers:  []string{uniqueId},
 			},
+			Expire: "60",
 		}
 
 		if payload, err := json.Marshal(ham); err == nil {
@@ -101,7 +106,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			if _, err := mqttClient.Publish(context.Background(), &paho.Publish{
 				Topic:   topic,
 				QoS:     0,
-				Retain:  false,
+				Retain:  true,
 				Payload: payload,
 			}); err != nil {
 				log.Debugln("MQTT: error sending message:", err)

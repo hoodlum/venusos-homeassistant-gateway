@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/eclipse/paho.golang/paho"
 	log "github.com/sirupsen/logrus"
 	"math"
@@ -81,13 +82,15 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 			devCla = "battery"
 		}
 
+		cleanedSensorName := removeSpace(entry.Name)
+
 		ham := &HomeAssistantMeta{
-			Name:       deviceName + "." + removeSpace(entry.Name),
-			UniqId:     uniqueId + "_" + removeSpace(entry.Name),
+			Name:       fmt.Sprintf("%s.%s", deviceName, cleanedSensorName),
+			UniqId:     fmt.Sprintf("%s_%s", uniqueId, cleanedSensorName),
 			StatT:      statusTopic,
 			DevCla:     devCla,
 			StatCla:    statCla,
-			ValTpl:     "{{ value_json." + removeSpace(entry.Name) + " | is_defined }}",
+			ValTpl:     fmt.Sprintf("{{ value_json.%s | is_defined }}", cleanedSensorName),
 			UnitOfMeas: entry.Unit,
 			Device: HomeAssistantDevice{
 				Name:         deviceName,

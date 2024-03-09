@@ -39,5 +39,5 @@ jobs:
         name: Upload assets
         uses: actions/upload-artifact@v4
         with:
-          name: vz-homeassistant-gateway
+          name: ${{ github.event.repository.name }}
           path: myfolder/dist/*

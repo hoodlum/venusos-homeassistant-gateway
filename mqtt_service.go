@@ -28,7 +28,7 @@ type HomeAssistantMeta struct {
 	UniqId     string              `json:"uniq_id"`
 	StatT      string              `json:"stat_t"`
 	DevCla     string              `json:"dev_cla"`
-	StatCla    string              `json:"stat_cla"`
+	StatCla    string              `json:"stat_cla,omitempty"`
 	ValTpl     string              `json:"val_tpl"`
 	UnitOfMeas string              `json:"unit_of_meas"`
 	Device     HomeAssistantDevice `json:"device"`
@@ -63,30 +63,35 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 
 		devCla := ""
 		statCla := ""
+		expire := ""
 		switch entry.Unit {
+		case "W":
+			devCla = "power"
+			statCla = "measurement"
+			expire = "60"
+		case "A":
+			devCla = "current"
+			statCla = "measurement"
+			expire = "60"
+		case "V":
+			devCla = "voltage"
+			statCla = "measurement"
+			expire = "60"
+		case "°C":
+			devCla = "temperature"
+			statCla = "measurement"
+			expire = "60"
 		case "Wh":
 			devCla = "energy"
 			statCla = "total_increasing"
 		case "s":
 			devCla = "duration"
-		case "W":
-			devCla = "power"
-			statCla = "measurement"
 		case "kWh":
 			devCla = "energy"
 			statCla = "total_increasing"
 		case "MWh":
 			devCla = "energy"
 			statCla = "total_increasing"
-		case "A":
-			devCla = "current"
-			statCla = "measurement"
-		case "V":
-			devCla = "voltage"
-			statCla = "measurement"
-		case "°C":
-			devCla = "temperature"
-			statCla = "measurement"
 		case "%":
 			devCla = "battery"
 		}
@@ -108,10 +113,7 @@ func createAutoDiscoveryMeta(item MonitoringItem) {
 				Manufacturer: manufacturer,
 				Identifiers:  []string{uniqueId},
 			},
-		}
-
-		if statCla == "measurement" {
-			ham.Expire = "60"
+			Expire: expire,
 		}
 
 		if payload, err := json.Marshal(ham); err == nil {

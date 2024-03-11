@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const PROGRAMM_VERSION = "v2.0.0"
+
 var watchdog *Watchdog
 var dbusName string
 

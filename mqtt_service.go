@@ -32,22 +32,20 @@ type HomeAssistantMeta struct {
 	ValTpl     string              `json:"val_tpl"`
 	UnitOfMeas string              `json:"unit_of_meas"`
 	Device     HomeAssistantDevice `json:"device"`
-	Expire     string              `json:"expire_after"`
+	Expire     string              `json:"expire_after,omitempty"`
 }
 
-const homeAssistantMetaTopic = "homeassistant/sensor/"
-
-//const homeAssistantMetaTopic = "test/homeassistant/sensor/"
+// const homeAssistantMetaTopic = "homeassistant/sensor/"
+const homeAssistantMetaTopic = "test/homeassistant/sensor/"
 
 const deviceName = "jkbms"
 const deviceModel = "diy-batterie"
 const uniqueId = "batt1"
-const swVersion = "v0.1"
+const swVersion = PROGRAMM_VERSION
 const manufacturer = "DIY"
 
-const statusTopic = deviceName + "/" + uniqueId
-
-//const statusTopic = "test/" + deviceName + "/" + uniqueId
+// const statusTopic = deviceName + "/" + uniqueId
+const statusTopic = "test/" + deviceName + "/" + uniqueId
 
 var mqttClient *paho.Client
 

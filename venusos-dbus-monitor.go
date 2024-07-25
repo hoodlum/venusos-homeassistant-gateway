@@ -14,24 +14,13 @@ var watchdog *Watchdog
 var dbusName string
 
 func init() {
-	lvl, ok := os.LookupEnv("LOG_LEVEL")
-	if !ok {
-		lvl = "info"
-	}
-
-	ll, err := log.ParseLevel(lvl)
-	if err != nil {
-		ll = log.DebugLevel
-	}
-
-	log.SetLevel(ll)
+	loadConfigFromArgs()
+	setLogLevel()
 }
 
 func main() {
 
-	config := getConfig()
-
-	startMqttClient(config.mqttServer, config.mqttClientId)
+	startMqttClient(config)
 	createAutoDiscovery(config.monitoringItem)
 
 	initDbusService()

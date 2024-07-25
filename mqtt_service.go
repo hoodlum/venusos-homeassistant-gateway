@@ -149,11 +149,11 @@ func removeSpace(s string) string {
 	return string(rr)
 }
 
-func startMqttClient(mqttServer, mqttClientId string) {
+func startMqttClient(config GatewayConfig) {
 
-	conn, err := net.Dial("tcp", mqttServer)
+	conn, err := net.Dial("tcp", *config.mqttServer)
 	if err != nil {
-		log.Fatalf("Failed to connect to %s: %s", mqttServer, err)
+		log.Fatalf("Failed to connect to %s: %s", *config.mqttServer, err)
 	}
 
 	mqttClient = paho.NewClient(paho.ClientConfig{
@@ -164,7 +164,7 @@ func startMqttClient(mqttServer, mqttClientId string) {
 
 	cp := &paho.Connect{
 		KeepAlive:    30,
-		ClientID:     mqttClientId,
+		ClientID:     *config.mqttClientId,
 		CleanStart:   true,
 		UsernameFlag: true,
 		PasswordFlag: true,
@@ -176,10 +176,10 @@ func startMqttClient(mqttServer, mqttClientId string) {
 	}
 
 	if ca.ReasonCode != 0 {
-		log.Fatalf("Failed to connect to %s : %d - %s", mqttServer, ca.ReasonCode, ca.Properties.ReasonString)
+		log.Fatalf("Failed to connect to %s : %d - %s", *config.mqttServer, ca.ReasonCode, ca.Properties.ReasonString)
 	}
 
-	log.Infof("MQTT: Connected to %s\n", mqttServer)
+	log.Infof("MQTT: Connected to %s\n", *config.mqttServer)
 
 	ic := make(chan os.Signal, 1)
 	signal.Notify(ic, os.Interrupt, syscall.SIGTERM)
@@ -189,7 +189,7 @@ func startMqttClient(mqttServer, mqttClientId string) {
 		log.Infof("signal received, exiting")
 		if mqttClient != nil {
 			d := &paho.Disconnect{ReasonCode: 0}
-			mqttClient.Disconnect(d)
+			_ = mqttClient.Disconnect(d)
 		}
 		//os.Exit(0)
 	}()

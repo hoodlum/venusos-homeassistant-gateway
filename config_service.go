@@ -11,12 +11,16 @@ import (
 
 // type LookupTable map[string][]BatchEntry
 
-type Config struct {
-	configFile   string
-	mqttServer   string
-	mqttClientId string
-	//lookupTable    LookupTable
+type GatewayConfig struct {
+	mqttServer     *string
+	mqttTopic      *string
+	mqttQos        *int
+	mqttClientId   *string
+	mqttUsername   *string
+	mqttPassword   *string
+	configFile     *string
 	monitoringItem []MonitoringItem
+	debugLevel     string
 }
 
 type BatchEntry struct {
@@ -42,32 +46,55 @@ type MonitoringItem struct {
 	Entries    []BatchEntry
 }
 
-func getConfig() Config {
+var config GatewayConfig
 
-	configFile := flag.String("config", "lookupTable.json", "path of config file ")
-	mqttServer := flag.String("server", "192.168.178.3:1883", "IP:Port")
-	//mqttQos := flag.Int("qos", 0, "The QoS to subscribe to messages at")
-	mqttClientId := flag.String("clientid", "vz-homeassistant-gateway", "A clientid for the connection")
-	//username := flag.String("username", "", "A username to authenticate to the MQTT server")
-	//password := flag.String("password", "", "Password to match username")
+func setLogLevel() {
+	var ok bool
+
+	if config.debugLevel == "unknown" {
+
+		config.debugLevel, ok = os.LookupEnv("LOG_LEVEL")
+		if !ok {
+			config.debugLevel = "info"
+		}
+	}
+
+	ll, err := log.ParseLevel(config.debugLevel)
+	if err != nil {
+		ll = log.DebugLevel
+	}
+
+	log.SetLevel(ll)
+}
+
+func loadConfigFromArgs() {
+
+	config.mqttServer = flag.String("server", "192.168.178.3:1883", "IP:Port")
+	config.mqttTopic = flag.String("topic", "/smartmeter1/power", "Topic to subscribe to")
+	config.mqttQos = flag.Int("qos", 0, "The QoS to subscribe to messages at")
+	config.mqttClientId = flag.String("clientid", "vz-homeassistant-gateway", "A clientid for the connection")
+	config.mqttUsername = flag.String("username", "", "A username to authenticate to the MQTT server")
+	config.mqttPassword = flag.String("password", "", "Password to match username")
+	config.configFile = flag.String("config", "lookupTable.json", "path of config file ")
+	debugLevel := flag.String("debug_level", "none", "error, debug, info")
+
 	flag.Parse()
-	log.Infof("Gateway: Load config from %s", *configFile)
-	log.Infof("MQTT: clientId=%s", *mqttClientId)
-	log.Infof("MQTT: server=%s", *mqttServer)
 
-	batches, err := loadBatchesFromConfig(*configFile)
+	config.debugLevel = *debugLevel
+
+	log.Infof("Gateway: Load config from %s", *config.configFile)
+	log.Infof("MQTT: clientId=%s", *config.mqttClientId)
+	log.Infof("MQTT: server=%s", *config.mqttServer)
+
+	batches, err := loadBatchesFromConfig(*config.configFile)
 	if err != nil {
 		log.Info("Gateway: Error parsing configFile")
 		os.Exit(1)
 	}
 
-	return Config{
-		mqttClientId: *mqttClientId,
-		mqttServer:   *mqttServer,
-		configFile:   *configFile,
-		//lookupTable:    extractLookupTable(batches),
-		monitoringItem: extractMonitoringItems(batches),
-	}
+	config.monitoringItem = extractMonitoringItems(batches)
+	//lookupTable:    extractLookupTable(batches),
+
 }
 
 func loadBatchesFromConfig(fileName string) ([]Batch, error) {
